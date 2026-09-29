@@ -1,4 +1,6 @@
 // SPDX License Indentifier: GPL-3.0 WITH Programs-Exception
+// Based on : ao486/rtl/ao486/autogen/define.v
+// File : fpga-long-mode/rtl/include/sys/autogen/define.v
 
 `define PREFIX_REX_MASK                        4'd4    // Captures prefixes 40h to 4Fh (REX)
 `define CMD_MOVSXD                             7'd118  // New Opcode 63h: sign-extend 32->64 bits
