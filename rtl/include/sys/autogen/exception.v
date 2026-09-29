@@ -1,0 +1,120 @@
+//SPDX License Indentifier : GPL-3.0 WITH Program-Exception
+
+// ============================================================ conditions
+wire cond_0  = exception_init || wr_debug_init;
+wire cond_1  = ~(class_trap) && ~(class_abort);
+wire cond_2  = wr_is_rsp_speculative;                      // x86_64: updated from ESP to RSP
+wire cond_3  = vector != EXCEPTION_DB;
+wire cond_4  = vector == EXCEPTION_DB;
+wire cond_5  = wr_debug_init && ~(wr_string_in_progress_final);
+wire cond_6  = wr_debug_init && wr_string_in_progress_final;
+wire cond_7  = shutdown_start == `FALSE && count > 2'd0 && exception_type != EXCEPTION_TYPE_DOUBLE_FAULT && (
+                 (last_type == EXCEPTION_TYPE_CONTRIBUTORY && exception_type == EXCEPTION_TYPE_CONTRIBUTORY) ||
+                 (last_type == EXCEPTION_TYPE_PAGE_FAULT   && exception_type == EXCEPTION_TYPE_CONTRIBUTORY) ||
+                 (last_type == EXCEPTION_TYPE_PAGE_FAULT   && exception_type == EXCEPTION_TYPE_PAGE_FAULT));
+wire cond_8  = shutdown_start == `FALSE;
+wire cond_9  = shutdown_start;
+wire cond_10 = shutdown;
+wire cond_11 = interrupt_done;
+
+// ============================================================ saves
+assign exc_soft_int_to_reg =
+    (cond_0 && ~cond_7 && cond_8) ? ( FALSE) :
+    (cond_11)                     ? ( FALSE) :
+    exc_soft_int;
+
+assign exc_push_error_to_reg =
+    (cond_0 && ~cond_7 && cond_8) ? ( push_error) :
+    (cond_11)                     ? ( `FALSE)    :
+    exc_push_error;
+
+assign count_to_reg =
+    (cond_0 && ~cond_7 && cond_8) ? ( count + 2'd1) :
+    count;
+
+// x86_64: Bus widened to 64 bits (RIP) replacing EIP
+assign exc_rip_to_reg =
+    (cond_0 && ~cond_1)           ? ( trap_rip) :
+    (cond_0 && cond_4 && cond_5)  ? ( wr_rip) :
+    (cond_0 && cond_4 && cond_6)  ? ( exception_rip_from_wr) :
+    (cond_11)                     ? ( (interrupt_string_in_progress) ? exception_rip_from_wr : wr_rip) :
+    exc_rip;
+
+assign external_to_reg =
+    (cond_0)  ? ( TRUE) :
+    (cond_11) ? ( TRUE) :
+    external;
+
+assign last_type_to_reg =
+    (cond_0 && ~cond_7 && cond_8) ? ( exception_type) :
+    last_type;
+
+assign exc_vector_full_to_reg =
+    (cond_0 && cond_7)            ? ( { 1'b1, `EXCEPTION_DF }) :
+    (cond_0 && ~cond_7 && cond_8) ? ( { 1'b0, vector }) :
+    (cond_0 && cond_9)            ? ( { 1'b0, vector }) :
+    (cond_11)                     ? ( { 1'b0, interrupt_vector }) :
+    exc_vector_full;
+
+// x86_64: Error code expanded from 16 bits to 32 bits in Long Mode
+assign exc_error_code_to_reg =
+    (cond_0 && cond_7)            ? ( 32'd0) :
+    (cond_0 && ~cond_7 && cond_8) ? ( error_code) :
+    (cond_11)                     ? ( 32'd0) :
+    exc_error_code;
+
+assign exc_soft_int_ib_to_reg =
+    (cond_0 && ~cond_7 && cond_8) ? ( FALSE) :
+    (cond_11)                     ? ( FALSE) :
+    exc_soft_int_ib;
+
+assign shutdown_to_reg =
+    (cond_0 && cond_9) ? ( `TRUE) :
+    shutdown;
+
+// ============================================================ always
+// ============================================================ sets
+
+// x86_64: Updated from EFLAGS to RFLAGS (semantic signal change)
+assign exc_set_rflag =
+    (cond_0 && cond_1 && cond_3) ? (`TRUE) :
+    1'd0;
+
+assign exc_dec_reset =
+    (cond_0)  ? (TRUE) :
+    (cond_10) ? (TRUE) :
+    (cond_11) ? (`TRUE) :
+    1'd0;
+
+// x86_64: Stack pointer restore flag updated to RSP
+assign exc_restore_rsp =
+    (cond_0 && cond_1 && cond_2) ? (`TRUE) :
+    1'd0;
+
+assign exc_micro_reset =
+    (cond_0)  ? (TRUE) :
+    (cond_10) ? (TRUE) :
+    (cond_11) ? (`TRUE) :
+    1'd0;
+
+assign exc_wr_reset =
+    (cond_0)  ? (TRUE) :
+    (cond_10) ? (TRUE) :
+    (cond_11) ? (`TRUE) :
+    1'd0;
+
+assign exc_rd_reset =
+    (cond_0)  ? (TRUE) :
+    (cond_10) ? (TRUE) :
+    (cond_11) ? (`TRUE) :
+    1'd0;
+
+assign exc_exe_reset =
+    (cond_0)  ? (TRUE) :
+    (cond_10) ? (TRUE) :
+    (cond_11) ? (`TRUE) :
+    1'd0;
+
+assign exception_start =
+    (cond_0 && ~cond_7 && cond_8) ? (`TRUE) :
+    1'd0;
